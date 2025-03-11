@@ -9,7 +9,7 @@ namespace DungeonExplorer
             try
             {
                 // Create and start the game
-                Testing.RunTests();
+                // Testing.RunTests();
 
                 Console.WriteLine("Starting Dungeon Explorer...");
                 Game game = new Game();
