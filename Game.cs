@@ -82,30 +82,50 @@ namespace DungeonExplorer
         {
             int nextRoom = -1;
 
-            // Simple room connections
-            if (direction == "forward")
+            // Simple room connections using switch statements
+            switch (direction)
             {
-                if (currentRoomIndex == ENTRANCE)
-                    nextRoom = HALLWAY;
-            }
-            else if (direction == "back")
-            {
-                if (currentRoomIndex == HALLWAY)
-                    nextRoom = ENTRANCE;
-                else if (currentRoomIndex == CHAMBER)
-                    nextRoom = HALLWAY;
-                else if (currentRoomIndex == LIBRARY)
-                    nextRoom = HALLWAY;
-            }
-            else if (direction == "left")
-            {
-                if (currentRoomIndex == HALLWAY)
-                    nextRoom = CHAMBER;
-            }
-            else if (direction == "right")
-            {
-                if (currentRoomIndex == HALLWAY)
-                    nextRoom = LIBRARY;
+                case "forward":
+                    switch (currentRoomIndex)
+                    {
+                        case ENTRANCE:
+                            nextRoom = HALLWAY;
+                            break;
+                    }
+                    break;
+
+                case "back":
+                    switch (currentRoomIndex)
+                    {
+                        case HALLWAY:
+                            nextRoom = ENTRANCE;
+                            break;
+                        case CHAMBER:
+                            nextRoom = HALLWAY;
+                            break;
+                        case LIBRARY:
+                            nextRoom = HALLWAY;
+                            break;
+                    }
+                    break;
+
+                case "left":
+                    switch (currentRoomIndex)
+                    {
+                        case HALLWAY:
+                            nextRoom = CHAMBER;
+                            break;
+                    }
+                    break;
+
+                case "right":
+                    switch (currentRoomIndex)
+                    {
+                        case HALLWAY:
+                            nextRoom = LIBRARY;
+                            break;
+                    }
+                    break;
             }
 
             if (nextRoom != -1)
@@ -133,91 +153,81 @@ namespace DungeonExplorer
         {
             string lowerCommand = command.ToLower().Trim();
 
-            if (lowerCommand == "look")
+            switch (lowerCommand)
             {
-                Console.WriteLine(GetCurrentRoom().GetDescription());
-                if (GetCurrentRoom().HasItem())
-                {
-                    Console.WriteLine($"You see a {GetCurrentRoom().GetItemName()} here.");
-                }
+                case "look":
+                    Console.WriteLine(GetCurrentRoom().GetDescription());
+                    if (GetCurrentRoom().HasItem())
+                    {
+                        Console.WriteLine($"You see a {GetCurrentRoom().GetItemName()} here.");
+                    }
 
-                // Show available exits
-                Console.WriteLine("Possible directions:");
-                if (currentRoomIndex == ENTRANCE)
-                {
-                    Console.WriteLine("  forward: leads to a hallway");
-                }
-                else if (currentRoomIndex == HALLWAY)
-                {
-                    Console.WriteLine("  back: leads to the entrance");
-                    Console.WriteLine("  left: leads to a chamber");
-                    Console.WriteLine("  right: leads to a library");
-                }
-                else if (currentRoomIndex == CHAMBER)
-                {
-                    Console.WriteLine("  back: leads to the hallway");
-                }
-                else if (currentRoomIndex == LIBRARY)
-                {
-                    Console.WriteLine("  back: leads to the hallway");
-                }
+                    // Show available exits
+                    Console.WriteLine("Possible directions:");
+                    switch (currentRoomIndex)
+                    {
+                        case ENTRANCE:
+                            Console.WriteLine("  forward: leads to a hallway");
+                            break;
+                        case HALLWAY:
+                            Console.WriteLine("  back: leads to the entrance");
+                            Console.WriteLine("  left: leads to a chamber");
+                            Console.WriteLine("  right: leads to a library");
+                            break;
+                        case CHAMBER:
+                            Console.WriteLine("  back: leads to the hallway");
+                            break;
+                        case LIBRARY:
+                            Console.WriteLine("  back: leads to the hallway");
+                            break;
+                    }
+                    return true;
 
-                return true;
-            }
-            else if (lowerCommand == "status")
-            {
-                Console.WriteLine($"Health: {player.Health}");
-                Console.WriteLine($"Inventory: {player.InventoryContents()}");
-                return true;
-            }
-            else if (lowerCommand == "take")
-            {
-                if (GetCurrentRoom().HasItem())
-                {
-                    string item = GetCurrentRoom().TakeItem();
-                    player.PickUpItem(item);
-                    Console.WriteLine($"You picked up the {item}.");
-                }
-                else
-                {
-                    Console.WriteLine("There is nothing to take here.");
-                }
-                return true;
-            }
-            else if (lowerCommand == "move forward")
-            {
-                MovePlayer("forward");
-                return true;
-            }
-            else if (lowerCommand == "move back")
-            {
-                MovePlayer("back");
-                return true;
-            }
-            else if (lowerCommand == "move left")
-            {
-                MovePlayer("left");
-                return true;
-            }
-            else if (lowerCommand == "move right")
-            {
-                MovePlayer("right");
-                return true;
-            }
-            else if (lowerCommand == "help")
-            {
-                DisplayHelp();
-                return true;
-            }
-            else if (lowerCommand == "exit")
-            {
-                Console.WriteLine("Thank you for playing Dungeon Explorer!");
-                return false;
-            }
-            else
-            {
-                Console.WriteLine("Invalid Command. Type 'help' for a list of commands.");
-                return true;
+                case "status":
+                    Console.WriteLine($"Health: {player.Health}");
+                    Console.WriteLine($"Inventory: {player.InventoryContents()}");
+                    return true;
+
+                case "take":
+                    if (GetCurrentRoom().HasItem())
+                    {
+                        string item = GetCurrentRoom().TakeItem();
+                        player.PickUpItem(item);
+                        Console.WriteLine($"You picked up the {item}.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("There is nothing to take here.");
+                    }
+                    return true;
+
+                case "move forward":
+                    MovePlayer("forward");
+                    return true;
+
+                case "move back":
+                    MovePlayer("back");
+                    return true;
+
+                case "move left":
+                    MovePlayer("left");
+                    return true;
+
+                case "move right":
+                    MovePlayer("right");
+                    return true;
+
+                case "help":
+                    DisplayHelp();
+                    return true;
+
+                case "exit":
+                    Console.WriteLine("Thank you for playing Dungeon Explorer!");
+                    return false;
+
+                default:
+                    Console.WriteLine("Invalid Command. Type 'help' for a list of commands.");
+                    return true;
             }
         }
 
