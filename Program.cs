@@ -15,9 +15,9 @@ namespace DungeonExplorer
                 Game game = new Game();
                 game.Start();
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                Console.WriteLine($"An error occurred: {ex.Message}");
+                Console.WriteLine($"An error occurred: {exception.Message}");
             }
 
             Console.WriteLine("Press any key to exit...");

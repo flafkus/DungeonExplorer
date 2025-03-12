@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace DungeonExplorer
 {
@@ -17,6 +18,9 @@ namespace DungeonExplorer
         private const int HALLWAY = 1;
         private const int CHAMBER = 2;
         private const int LIBRARY = 3;
+
+        // Room connection structure
+        private Dictionary<int, Dictionary<string, int>> roomConnections;
 
         /// <summary>
         /// Creates a new game with multiple rooms and initialises the player
@@ -45,10 +49,47 @@ namespace DungeonExplorer
             rooms[CHAMBER] = new Room("A large chamber with ancient pillars. There appears to be an altar in the center.", "Silver Key");
             rooms[LIBRARY] = new Room("A small room filled with rotting bookshelves. Most books have decayed.", "Dusty Tome");
 
+            // Initialize room connections
+            SetupRoomConnections();
+
             // Set starting room
             currentRoomIndex = ENTRANCE;
 
             Console.WriteLine($"Welcome, {player.Name}! Your adventure begins at the dungeon entrance...");
+        }
+
+        /// <summary>
+        /// Sets up the connections between rooms
+        /// </summary>
+        private void SetupRoomConnections()
+        {
+            roomConnections = new Dictionary<int, Dictionary<string, int>>();
+
+            // Set up connections for entrance room
+            roomConnections[ENTRANCE] = new Dictionary<string, int>
+            {
+                { "forward", HALLWAY }
+            };
+
+            // Set up connections for hallway room
+            roomConnections[HALLWAY] = new Dictionary<string, int>
+            {
+                { "back", ENTRANCE },
+                { "left", CHAMBER },
+                { "right", LIBRARY }
+            };
+
+            // Set up connections for chamber room
+            roomConnections[CHAMBER] = new Dictionary<string, int>
+            {
+                { "back", HALLWAY }
+            };
+
+            // Set up connections for library room
+            roomConnections[LIBRARY] = new Dictionary<string, int>
+            {
+                { "back", HALLWAY }
+            };
         }
 
         /// <summary>
@@ -80,56 +121,14 @@ namespace DungeonExplorer
         /// <param name="direction">The direction to move (forward, back, left, right)</param>
         private void MovePlayer(string direction)
         {
-            int nextRoom = -1;
-
-            // Simple room connections using switch statements
-            switch (direction)
+            // Check if the current room has a connection in the specified direction
+            if (roomConnections.ContainsKey(currentRoomIndex) &&
+                roomConnections[currentRoomIndex].ContainsKey(direction))
             {
-                case "forward":
-                    switch (currentRoomIndex)
-                    {
-                        case ENTRANCE:
-                            nextRoom = HALLWAY;
-                            break;
-                    }
-                    break;
+                // Get the next room index
+                int nextRoom = roomConnections[currentRoomIndex][direction];
 
-                case "back":
-                    switch (currentRoomIndex)
-                    {
-                        case HALLWAY:
-                            nextRoom = ENTRANCE;
-                            break;
-                        case CHAMBER:
-                            nextRoom = HALLWAY;
-                            break;
-                        case LIBRARY:
-                            nextRoom = HALLWAY;
-                            break;
-                    }
-                    break;
-
-                case "left":
-                    switch (currentRoomIndex)
-                    {
-                        case HALLWAY:
-                            nextRoom = CHAMBER;
-                            break;
-                    }
-                    break;
-
-                case "right":
-                    switch (currentRoomIndex)
-                    {
-                        case HALLWAY:
-                            nextRoom = LIBRARY;
-                            break;
-                    }
-                    break;
-            }
-
-            if (nextRoom != -1)
-            {
+                // Move to the next room
                 currentRoomIndex = nextRoom;
                 Console.WriteLine($"You move {direction}.");
                 Console.WriteLine(GetCurrentRoom().GetDescription());
@@ -164,22 +163,17 @@ namespace DungeonExplorer
 
                     // Show available exits
                     Console.WriteLine("Possible directions:");
-                    switch (currentRoomIndex)
+                    if (roomConnections.ContainsKey(currentRoomIndex))
                     {
-                        case ENTRANCE:
-                            Console.WriteLine("  forward: leads to a hallway");
-                            break;
-                        case HALLWAY:
-                            Console.WriteLine("  back: leads to the entrance");
-                            Console.WriteLine("  left: leads to a chamber");
-                            Console.WriteLine("  right: leads to a library");
-                            break;
-                        case CHAMBER:
-                            Console.WriteLine("  back: leads to the hallway");
-                            break;
-                        case LIBRARY:
-                            Console.WriteLine("  back: leads to the hallway");
-                            break;
+                        foreach (var direction in roomConnections[currentRoomIndex].Keys)
+                        {
+                            int targetRoom = roomConnections[currentRoomIndex][direction];
+                            Console.WriteLine($"  {direction}: leads to {GetRoomDescription(targetRoom)}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("  None");
                     }
                     return true;
 
@@ -228,6 +222,28 @@ namespace DungeonExplorer
                 default:
                     Console.WriteLine("Invalid Command. Type 'help' for a list of commands.");
                     return true;
+            }
+        }
+
+        /// <summary>
+        /// Gets a simple description of a room based on its index
+        /// </summary>
+        /// <param name="roomIndex">The index of the room</param>
+        /// <returns>A simple description of the room</returns>
+        private string GetRoomDescription(int roomIndex)
+        {
+            switch (roomIndex)
+            {
+                case ENTRANCE:
+                    return "the entrance";
+                case HALLWAY:
+                    return "a hallway";
+                case CHAMBER:
+                    return "a chamber";
+                case LIBRARY:
+                    return "a library";
+                default:
+                    return "an unknown location";
             }
         }
 
