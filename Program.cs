@@ -1,18 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace DungeonExplorer
+namespace DungeonExplorer 
 {
-    internal class Program
+    public class Program
     {
         static void Main(string[] args)
         {
-            Game game = new Game();
-            game.Start();
-            Console.WriteLine("Waiting for your Implementation");
+            try
+            {
+                // Create and start the game
+                // Testing.RunTests();
+
+                Console.WriteLine("Starting Dungeon Explorer...");
+                Game game = new Game();
+                game.Start();
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine($"An error occurred: {exception.Message}");
+            }
+
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
         }
