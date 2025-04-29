@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Diagnostics;
+using System.IO;
 
 namespace DungeonExplorer
 {
@@ -10,12 +11,85 @@ namespace DungeonExplorer
     /// </summary>
     public class Testing
     {
+        private static StreamWriter _logFile;
+        private static string _logFilePath;
+        
+        /// <summary>
+        /// Generates a timestamped log filename in the format test_YYYY-MM-DD_HH-MM-SS.txt
+        /// </summary>
+        private static string GenerateLogFileName()
+        {
+            DateTime now = DateTime.Now;
+            return $"test_{now:yyyy-MM-dd}_{now:HH-mm-ss}.txt";
+        }
+        
+        /// <summary>
+        /// Initializes the test log file
+        /// </summary>
+        private static void InitializeLogFile()
+        {
+            try
+            {
+                _logFilePath = GenerateLogFileName();
+                _logFile = new StreamWriter(_logFilePath, false);
+                _logFile.WriteLine($"DungeonExplorer Test Log - {DateTime.Now}");
+                _logFile.WriteLine("======================================");
+                _logFile.Flush();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing log file: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Logs a message to both console and log file
+        /// </summary>
+        private static void Log(string message)
+        {
+            Console.WriteLine(message);
+            
+            try
+            {
+                if (_logFile != null)
+                {
+                    _logFile.WriteLine(message);
+                    _logFile.Flush();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error writing to log file: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Closes the log file
+        /// </summary>
+        private static void CloseLogFile()
+        {
+            try
+            {
+                if (_logFile != null)
+                {
+                    _logFile.WriteLine("\nAll tests completed at " + DateTime.Now);
+                    _logFile.Close();
+                    Console.WriteLine($"Test log written to {Path.GetFullPath(_logFilePath)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error closing log file: {ex.Message}");
+            }
+        }
+        
         /// <summary>
         /// Runs all the tests for the game
         /// </summary>
         public static void RunTests()
         {
-            Console.WriteLine("Running tests...");
+            InitializeLogFile();
+            Log("Running tests...");
 
             TestPlayer();
             TestRoom();
@@ -25,8 +99,10 @@ namespace DungeonExplorer
             TestGameMap();
             TestCreatureHierarchy();
             TestPolymorphism();
+            TestStatistics();
 
-            Console.WriteLine("All tests passed successfully!");
+            Log("All tests passed successfully!");
+            CloseLogFile();
         }
 
         /// <summary>
@@ -34,7 +110,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestPlayer()
         {
-            Console.WriteLine("Testing Player class...");
+            Log("Testing Player class...");
 
             // Create a test player
             Player player = new Player("TestPlayer", 100);
@@ -60,7 +136,7 @@ namespace DungeonExplorer
             player.UseItem("Health Potion");
             Debug.Assert(player.Health == 90, "Potion not used correctly");
 
-            Console.WriteLine("Player tests passed!");
+            Log("Player tests passed!");
         }
 
         /// <summary>
@@ -68,7 +144,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestRoom()
         {
-            Console.WriteLine("Testing Room class...");
+            Log("Testing Room class...");
 
             // Test room with an item
             Room roomWithItem = new Room("Test Room");
@@ -100,7 +176,7 @@ namespace DungeonExplorer
             Debug.Assert(unlocked, "Room should be unlocked with the correct key");
             Debug.Assert(!lockedRoom.IsLocked(), "Room should no longer be locked");
 
-            Console.WriteLine("Room tests passed!");
+            Log("Room tests passed!");
         }
 
         /// <summary>
@@ -108,7 +184,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestItem()
         {
-            Console.WriteLine("Testing Item class hierarchy...");
+            Log("Testing Item class hierarchy...");
 
             // Test base Item
             Item genericItem = new Item("Generic Item", "Just a test item");
@@ -132,7 +208,7 @@ namespace DungeonExplorer
             Debug.Assert(treasureKey.Name == "Golden Key", "Key name not set correctly");
             Debug.Assert(treasureKey.UnlockCode == "treasure", "Key unlock code not set correctly");
 
-            Console.WriteLine("Item tests passed!");
+            Log("Item tests passed!");
         }
 
         /// <summary>
@@ -140,7 +216,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestInventory()
         {
-            Console.WriteLine("Testing Inventory class...");
+            Log("Testing Inventory class...");
 
             // Create inventory and add items
             Inventory inventory = new Inventory();
@@ -175,7 +251,7 @@ namespace DungeonExplorer
             Debug.Assert(inventory.GetItemCount() == 2, "Inventory should have 2 items after removal");
             Debug.Assert(inventory.FindItem("Health Potion") == null, "Potion should be removed");
 
-            Console.WriteLine("Inventory tests passed!");
+            Log("Inventory tests passed!");
         }
 
         /// <summary>
@@ -183,7 +259,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestMonster()
         {
-            Console.WriteLine("Testing Monster class...");
+            Log("Testing Monster class...");
 
             // Test base Monster
             Item droppedItem = new Item("Monster Fang", "A sharp fang");
@@ -221,7 +297,7 @@ namespace DungeonExplorer
             Debug.Assert(dragon.Type == "Dragon", "Dragon type is incorrect");
             Debug.Assert(dragon.Health == 100, "Dragon should have 50 health");
 
-            Console.WriteLine("Monster tests passed!");
+            Log("Monster tests passed!");
         }
 
         /// <summary>
@@ -229,7 +305,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestGameMap()
         {
-            Console.WriteLine("Testing GameMap class...");
+            Log("Testing GameMap class...");
 
             // Create a simple map
             GameMap map = new GameMap();
@@ -265,7 +341,7 @@ namespace DungeonExplorer
             GameMap defaultMap = GameMap.CreateDefaultDungeon();
             Debug.Assert(defaultMap.GetRoomCount() > 0, "Default dungeon should have rooms");
             
-            Console.WriteLine("GameMap tests passed!");
+            Log("GameMap tests passed!");
         }
 
         /// <summary>
@@ -273,7 +349,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestCreatureHierarchy()
         {
-            Console.WriteLine("Testing Creature hierarchy...");
+            Log("Testing Creature hierarchy...");
 
             // Check if Player is a Creature
             Player player = new Player("Test Player", 100);
@@ -290,7 +366,7 @@ namespace DungeonExplorer
             Debug.Assert(goblin is Monster, "Goblin should inherit from Monster");
             Debug.Assert(goblin is Creature, "Goblin should be a Creature via inheritance");
 
-            Console.WriteLine("Creature hierarchy tests passed!");
+            Log("Creature hierarchy tests passed!");
         }
 
         /// <summary>
@@ -298,7 +374,7 @@ namespace DungeonExplorer
         /// </summary>
         private static void TestPolymorphism()
         {
-            Console.WriteLine("Testing polymorphism...");
+            Log("Testing polymorphism...");
 
             // Test different attack behaviors
             Goblin goblin = new Goblin("Goblin");
@@ -317,7 +393,7 @@ namespace DungeonExplorer
             {
                 int damage = creature.Attack();
                 Debug.Assert(damage >= 0, $"{creature.Name} attack damage should be non-negative");
-                Console.WriteLine($"{creature.Name} attacks for {damage} damage");
+                Log($"{creature.Name} attacks for {damage} damage");
             }
 
             // Test polymorphic method implementation
@@ -325,7 +401,7 @@ namespace DungeonExplorer
             {
                 string description = creature.GetDescription();
                 Debug.Assert(!string.IsNullOrEmpty(description), "Description should not be empty");
-                Console.WriteLine(description);
+                Log(description);
             }
 
             // Test item polymorphism
@@ -343,10 +419,10 @@ namespace DungeonExplorer
             {
                 string details = item.GetDetails();
                 Debug.Assert(!string.IsNullOrEmpty(details), "Item details should not be empty");
-                Console.WriteLine(details);
+                Log(details);
             }
 
-            Console.WriteLine("Polymorphism tests passed!");
+            Log("Polymorphism tests passed!");
         }
 
         /// <summary>
@@ -354,7 +430,92 @@ namespace DungeonExplorer
         /// </summary>
         private static void ThrowError(string message)
         {
-            throw new Exception($"Test failed: {message}");
+            Log($"ERROR: {message}");
+            throw new Exception(message);
+        }
+        
+        /// <summary>
+        /// Tests the Statistics class functionality
+        /// </summary>
+        private static void TestStatistics()
+        {
+            Log("Testing Statistics class...");
+            
+            // Create a new statistics tracker
+            Statistics stats = new Statistics();
+            
+            // Test initial values
+            string initialReport = stats.GetStatisticsReport();
+            Debug.Assert(initialReport.Contains("Monsters Defeated: 0"), "Initial monsters defeated should be 0");
+            Debug.Assert(initialReport.Contains("Rooms Explored: 0"), "Initial rooms explored should be 0");
+            Debug.Assert(initialReport.Contains("Items Collected: 0"), "Initial items collected should be 0");
+            
+            // Test recording monster defeats
+            stats.RecordMonsterDefeated("Goblin");
+            stats.RecordMonsterDefeated("Goblin");
+            stats.RecordMonsterDefeated("Troll");
+            
+            string monsterReport = stats.GetStatisticsReport();
+            Debug.Assert(monsterReport.Contains("Monsters Defeated: 3"), "Should have 3 monsters defeated");
+            Debug.Assert(monsterReport.Contains("Goblin: 2"), "Should have 2 goblins defeated");
+            Debug.Assert(monsterReport.Contains("Troll: 1"), "Should have 1 troll defeated");
+            
+            // Test recording rooms explored
+            stats.RecordRoomExplored();
+            stats.RecordRoomExplored();
+            
+            string roomReport = stats.GetStatisticsReport();
+            Debug.Assert(roomReport.Contains("Rooms Explored: 2"), "Should have 2 rooms explored");
+            
+            // Test recording items collected
+            stats.RecordItemCollected("Weapon");
+            stats.RecordItemCollected("Potion");
+            stats.RecordItemCollected("Weapon");
+            
+            string itemReport = stats.GetStatisticsReport();
+            Debug.Assert(itemReport.Contains("Items Collected: 3"), "Should have 3 items collected");
+            Debug.Assert(itemReport.Contains("Weapon: 2"), "Should have 2 weapons collected");
+            Debug.Assert(itemReport.Contains("Potion: 1"), "Should have 1 potion collected");
+            
+            // Test damage tracking
+            stats.RecordDamageDealt(10);
+            stats.RecordDamageDealt(15, true); // Critical hit
+            stats.RecordDamageDealt(20);
+            
+            stats.RecordDamageTaken(5);
+            stats.RecordDamageTaken(10);
+            
+            string damageReport = stats.GetStatisticsReport();
+            Debug.Assert(damageReport.Contains("Total Damage Dealt: 45"), "Should have dealt 45 total damage");
+            Debug.Assert(damageReport.Contains("Total Damage Taken: 15"), "Should have taken 15 total damage");
+            Debug.Assert(damageReport.Contains("Highest Damage Dealt: 20"), "Highest damage should be 20");
+            Debug.Assert(damageReport.Contains("Critical Hits: 1"), "Should have 1 critical hit");
+            
+            // Test potion usage and player deaths
+            stats.RecordPotionUsed();
+            stats.RecordPotionUsed();
+            stats.RecordPlayerDeath();
+            
+            string miscReport = stats.GetStatisticsReport();
+            Debug.Assert(miscReport.Contains("Potions Used: 2"), "Should have used 2 potions");
+            
+            // Test time tracking
+            stats.StartTimeTracking();
+            // Wait a short time to ensure some time passes
+            System.Threading.Thread.Sleep(100);
+            stats.StopTimeTracking();
+            
+            string timeReport = stats.GetStatisticsReport();
+            Debug.Assert(timeReport.Contains("Play Time:"), "Play time should be recorded");
+            
+            // Test reset functionality
+            stats.Reset();
+            string resetReport = stats.GetStatisticsReport();
+            Debug.Assert(resetReport.Contains("Monsters Defeated: 0"), "Reset should set monsters defeated to 0");
+            Debug.Assert(resetReport.Contains("Rooms Explored: 0"), "Reset should set rooms explored to 0");
+            Debug.Assert(resetReport.Contains("Items Collected: 0"), "Reset should set items collected to 0");
+            
+            Log("Statistics tests passed!");
         }
     }
 }

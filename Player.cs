@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -161,6 +161,49 @@ namespace DungeonExplorer
         public override string GetDescription()
         {
             return $"{Name} - Health: {Health}/{MaxHealth} - Attack: {AttackPower}";
+        }
+
+        /// <summary>
+        /// Discards an item from the player's inventory
+        /// </summary>
+        /// <param name="itemName">The name of the item to discard</param>
+        /// <returns>True if the item was discarded, false otherwise</returns>
+        public bool DiscardItem(string itemName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(itemName))
+                {
+                    Console.WriteLine("Please specify an item to discard.");
+                    return false;
+                }
+
+                // Try to find the item in inventory
+                Item item = _inventory.FindItem(itemName);
+                if (item == null)
+                {
+                    Console.WriteLine($"You don't have a {itemName} to discard.");
+                    return false;
+                }
+
+                // Remove the item from inventory
+                bool removed = _inventory.RemoveItem(item);
+                if (removed)
+                {
+                    Console.WriteLine($"You discarded {item.Name}.");
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"Failed to discard {itemName}.");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error discarding item: {ex.Message}");
+                return false;
+            }
         }
     }
 }

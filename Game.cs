@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -14,6 +14,7 @@ namespace DungeonExplorer
         private string currentRoomId;
         private bool inCombat;
         private Monster currentEnemy;
+        private Statistics statistics;
 
         /// <summary>
         /// Creates a new game with multiple rooms and initialises the player
@@ -37,10 +38,14 @@ namespace DungeonExplorer
 
             // Create game map
             gameMap = GameMap.CreateDefaultDungeon();
-            
+
             // Set starting room
             currentRoomId = "entrance";
             inCombat = false;
+
+            // Initialize statistics tracking
+            statistics = new Statistics();
+            statistics.StartTimeTracking();
 
             Console.WriteLine($"Welcome, {player.Name}! Your adventure begins at the dungeon entrance...");
         }
@@ -60,22 +65,24 @@ namespace DungeonExplorer
         private void DisplayHelp()
         {
             Console.WriteLine("\n=== COMMANDS ===");
-            Console.WriteLine("look       - Look around the room");
-            Console.WriteLine("status     - Check health & basic inventory");
-            Console.WriteLine("inventory  - See detailed inventory");
-            Console.WriteLine("take [#/name] - Take item by number or name");
-            Console.WriteLine("use [name] - Use an item (potions, torch, etc.)");
-            Console.WriteLine("move [dir] - Move in a direction");
-            
+            Console.WriteLine("look           - Look around the room");
+            Console.WriteLine("status         - Check health & basic inventory");
+            Console.WriteLine("inventory      - See detailed inventory");
+            Console.WriteLine("stats          - View your game statistics");
+            Console.WriteLine("take [#/name]  - Take item by number or name");
+            Console.WriteLine("use [name]     - Use an item (potions, torch, etc.)");
+            Console.WriteLine("discard [name] - Discard an item from your inventory");
+            Console.WriteLine("move [dir]     - Move in a direction");
+
             // Only show combat commands if in combat
             if (inCombat)
             {
-                Console.WriteLine("attack     - Attack the current monster");
-                Console.WriteLine("flee       - Try to escape from combat");
+                Console.WriteLine("attack         - Attack the current monster");
+                Console.WriteLine("flee           - Try to escape from combat");
             }
-            
-            Console.WriteLine("help       - Show this menu");
-            Console.WriteLine("exit       - Exit the game");
+
+            Console.WriteLine("help           - Show this menu");
+            Console.WriteLine("exit           - Exit the game");
         }
 
         /// <summary>
@@ -114,7 +121,7 @@ namespace DungeonExplorer
                 {
                     // Get all keys in player's inventory
                     var keys = player.GetAllKeys();
-                    
+
                     // Try each key to see if it unlocks the room
                     bool unlocked = false;
                     foreach (Key key in keys)
@@ -126,7 +133,7 @@ namespace DungeonExplorer
                             break;
                         }
                     }
-                    
+
                     if (!unlocked)
                     {
                         Console.WriteLine("This room is locked. You need to find the right key to unlock it.");
@@ -139,6 +146,9 @@ namespace DungeonExplorer
                 Console.WriteLine($"You move {direction}.");
                 Console.WriteLine("\n=== LOCATION ===");
                 Console.WriteLine(GetCurrentRoom().GetDescription());
+
+                // Record room explored in statistics
+                statistics.RecordRoomExplored();
 
                 // Check for items
                 if (GetCurrentRoom().HasItems())
@@ -205,17 +215,21 @@ namespace DungeonExplorer
                 }
 
                 Console.WriteLine("\n=== IN COMBAT ===");
-                
+
                 // Player attacks first
                 int playerDamage = player.Attack();
                 Console.WriteLine($"You attack {currentEnemy.Name} for {playerDamage} damage!");
                 currentEnemy.TakeDamage(playerDamage);
 
+                // Record damage dealt in statistics
+                bool isCritical = playerDamage > player.AttackPower + 1; // Simple critical hit detection
+                statistics.RecordDamageDealt(playerDamage, isCritical);
+
                 // Check if monster is defeated
                 if (!currentEnemy.IsAlive())
                 {
                     Console.WriteLine($"\n{currentEnemy.Name} has been defeated!");
-                    
+
                     // Check for dropped item
                     Item droppedItem = currentEnemy.GetDroppedItem();
                     if (droppedItem != null)
@@ -223,12 +237,15 @@ namespace DungeonExplorer
                         Console.WriteLine($"{currentEnemy.Name} dropped {droppedItem.Name}!");
                         GetCurrentRoom().AddItem(droppedItem);
                     }
-                    
+
+                    // Record monster defeated in statistics
+                    statistics.RecordMonsterDefeated(currentEnemy.Name);
+
                     // Remove monster from room
                     GetCurrentRoom().RemoveMonster(currentEnemy);
                     inCombat = false;
                     currentEnemy = null;
-                    
+
                     // Check if there are more monsters
                     if (GetCurrentRoom().HasMonsters())
                     {
@@ -236,7 +253,7 @@ namespace DungeonExplorer
                         Console.WriteLine(GetCurrentRoom().GetMonstersDescription());
                         StartCombat();
                     }
-                    
+
                     return;
                 }
 
@@ -248,12 +265,25 @@ namespace DungeonExplorer
                 player.TakeDamage(monsterDamage);
                 Console.WriteLine($"\nYour health: {player.Health}");
 
+                // Record damage taken in statistics
+                statistics.RecordDamageTaken(monsterDamage);
+
                 // Check if player is defeated
                 if (!player.IsAlive())
                 {
                     Console.WriteLine("\n=== GAME OVER ===");
                     Console.WriteLine("You have been defeated! Game over.");
-                    inCombat = false;
+
+                    // Record player death in statistics
+                    statistics.RecordPlayerDeath();
+
+                    // Display final statistics
+                    statistics.StopTimeTracking();
+                    Console.WriteLine(statistics.GetStatisticsReport());
+
+                    Console.WriteLine("Press any key to exit...");
+                    Console.ReadKey();
+                    Environment.Exit(0);
                 }
             }
             catch (Exception ex)
@@ -280,7 +310,7 @@ namespace DungeonExplorer
                 Console.WriteLine("You successfully flee from combat!");
                 inCombat = false;
                 currentEnemy = null;
-                
+
                 // Move back to the previous room if possible
                 string previousRoomId = gameMap.GetDestinationRoomId(currentRoomId, "back");
                 if (previousRoomId != null)
@@ -293,18 +323,31 @@ namespace DungeonExplorer
             else
             {
                 Console.WriteLine("You failed to flee!");
-                
+
                 // Monster gets a free attack
                 int monsterDamage = currentEnemy.Attack();
                 Console.WriteLine($"{currentEnemy.Name} attacks you for {monsterDamage} damage while you try to flee!");
                 player.TakeDamage(monsterDamage);
                 Console.WriteLine($"Your health: {player.Health}");
-                
+
+                // Record damage taken in statistics
+                statistics.RecordDamageTaken(monsterDamage);
+
                 // Check if player is defeated
                 if (!player.IsAlive())
                 {
                     Console.WriteLine("You have been defeated! Game over.");
-                    inCombat = false;
+
+                    // Record player death in statistics
+                    statistics.RecordPlayerDeath();
+
+                    // Display final statistics
+                    statistics.StopTimeTracking();
+                    Console.WriteLine(statistics.GetStatisticsReport());
+
+                    Console.WriteLine("Press any key to exit...");
+                    Console.ReadKey();
+                    Environment.Exit(0);
                 }
             }
         }
@@ -335,7 +378,7 @@ namespace DungeonExplorer
                 {
                     // Get items in the room
                     List<Item> roomItems = GetCurrentRoom().GetItems();
-                    
+
                     // Check if the number is valid
                     if (itemNumber <= roomItems.Count)
                     {
@@ -358,7 +401,11 @@ namespace DungeonExplorer
                 if (item != null)
                 {
                     player.PickUpItem(item);
-                    // No need to print a message here as it's already printed in Player.PickUpItem()
+                    // Note: TakeItem already removes the item from the room, so no need to call RemoveItem
+                    
+                    // Record item collected in statistics
+                    string itemType = item.GetType().Name;
+                    statistics.RecordItemCollected(itemType);
                 }
                 else
                 {
@@ -390,19 +437,19 @@ namespace DungeonExplorer
                 {
                     // Get available directions
                     List<string> directions = gameMap.GetAvailableDirections(currentRoomId);
-                    
+
                     // Check each direction for a locked room
                     foreach (string direction in directions)
                     {
                         string destinationRoomId = gameMap.GetDestinationRoomId(currentRoomId, direction);
                         Room destinationRoom = gameMap.GetRoom(destinationRoomId);
-                        
+
                         if (destinationRoom != null && destinationRoom.IsLocked())
                         {
                             // Try to find the key in the player's inventory
                             var keys = player.GetAllWeapons().OfType<Key>().ToList();
                             Key key = keys.FirstOrDefault(k => k.Name.Contains(itemName));
-                            
+
                             if (key != null && destinationRoom.Unlock(key))
                             {
                                 Console.WriteLine($"You unlocked the {direction} door with {key.Name}!");
@@ -410,7 +457,7 @@ namespace DungeonExplorer
                             }
                         }
                     }
-                    
+
                     Console.WriteLine("There's no locked door nearby that this key fits.");
                     return;
                 }
@@ -420,6 +467,12 @@ namespace DungeonExplorer
                 if (!used)
                 {
                     Console.WriteLine($"You couldn't use {itemName}.");
+                }
+
+                // Record potion used in statistics
+                if (itemName.ToLower().Contains("potion"))
+                {
+                    statistics.RecordPotionUsed();
                 }
             }
             catch (Exception ex)
@@ -434,12 +487,12 @@ namespace DungeonExplorer
         private void DisplayInventory()
         {
             Console.WriteLine("\n=== YOUR INVENTORY ===");
-            
+
             // Get all items by type using LINQ
             var weapons = player.GetAllWeapons();
             var potions = player.GetAllPotions();
             var keys = player.GetAllKeys();
-            
+
             if (weapons.Count > 0)
             {
                 Console.WriteLine("\nWeapons:");
@@ -448,7 +501,7 @@ namespace DungeonExplorer
                     Console.WriteLine($"- {weapon.GetDetails()}");
                 }
             }
-            
+
             if (potions.Count > 0)
             {
                 Console.WriteLine("\nPotions:");
@@ -457,7 +510,7 @@ namespace DungeonExplorer
                     Console.WriteLine($"- {potion.GetDetails()}");
                 }
             }
-            
+
             if (keys.Count > 0)
             {
                 Console.WriteLine("\nKeys:");
@@ -466,11 +519,11 @@ namespace DungeonExplorer
                     Console.WriteLine($"- {key.GetDetails()}");
                 }
             }
-            
+
             // Other items
-            var otherItems = player._inventory.GetItems().Where(i => 
+            var otherItems = player._inventory.GetItems().Where(i =>
                 !(i is Weapon) && !(i is Potion) && !(i is Key)).ToList();
-                
+
             if (otherItems.Count > 0)
             {
                 Console.WriteLine("\nOther Items:");
@@ -479,7 +532,7 @@ namespace DungeonExplorer
                     Console.WriteLine($"- {item.GetDetails()}");
                 }
             }
-            
+
             if (player._inventory.GetItemCount() == 0)
             {
                 Console.WriteLine("\nYour inventory is empty.");
@@ -513,14 +566,14 @@ namespace DungeonExplorer
                     case "look":
                         Console.WriteLine("\n=== ROOM DESCRIPTION ===");
                         Console.WriteLine(GetCurrentRoom().GetDescription());
-                        
+
                         // Show items
                         if (GetCurrentRoom().HasItems())
                         {
                             Console.WriteLine("\n=== ITEMS ===");
                             Console.WriteLine(GetCurrentRoom().GetItemsDescription());
                         }
-                        
+
                         // Show monsters
                         if (GetCurrentRoom().HasMonsters())
                         {
@@ -537,7 +590,7 @@ namespace DungeonExplorer
                             {
                                 string destinationRoomId = gameMap.GetDestinationRoomId(currentRoomId, direction);
                                 Room destinationRoom = gameMap.GetRoom(destinationRoomId);
-                                
+
                                 if (destinationRoom.IsLocked())
                                 {
                                     Console.WriteLine($"- {direction}: locked door");
@@ -561,7 +614,7 @@ namespace DungeonExplorer
                         Console.WriteLine($"Name: {player.Name}");
                         Console.WriteLine($"Health: {player.Health}/{player.MaxHealth}");
                         Console.WriteLine($"Attack Power: {player.AttackPower}");
-                        
+
                         Console.WriteLine("\n=== QUICK INVENTORY ===");
                         Console.WriteLine(player.InventoryContents());
                         return true;
@@ -576,6 +629,10 @@ namespace DungeonExplorer
 
                     case "use":
                         UseItem(parameter);
+                        return true;
+                        
+                    case "discard":
+                        DiscardItem(parameter);
                         return true;
 
                     case "move":
@@ -594,8 +651,15 @@ namespace DungeonExplorer
                         DisplayHelp();
                         return true;
 
+                    case "stats":
+                        statistics.DisplayStatistics();
+                        return true;
+
                     case "exit":
-                        Console.WriteLine("Thank you for playing Dungeon Explorer!");
+                        Console.WriteLine("Thanks for playing Dungeon Explorer!");
+                        // Stop tracking time and display final statistics
+                        statistics.StopTimeTracking();
+                        statistics.DisplayStatistics();
                         return false;
 
                     default:
@@ -607,6 +671,35 @@ namespace DungeonExplorer
             {
                 Console.WriteLine($"Error processing command: {ex.Message}");
                 return true;
+            }
+        }
+
+        /// <summary>
+        /// Discards an item from the player's inventory
+        /// </summary>
+        /// <param name="itemName">The name of the item to discard</param>
+        private void DiscardItem(string itemName)
+        {
+            try
+            {
+                if (inCombat)
+                {
+                    Console.WriteLine("You can't discard items while in combat!");
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(itemName))
+                {
+                    Console.WriteLine("Please specify an item to discard.");
+                    return;
+                }
+
+                // Use the player's DiscardItem method
+                player.DiscardItem(itemName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error discarding item: {ex.Message}");
             }
         }
 
